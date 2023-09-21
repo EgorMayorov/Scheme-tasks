@@ -18,4 +18,4 @@
   )
 )
 
-(odd-fib-list 7)
+(odd-fib-list 10)
