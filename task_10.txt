@@ -1,0 +1,18 @@
+#lang racket
+
+(define (Y f) ((lambda (x) (x x)) (lambda (g) (f (lambda args (apply (g g) args))))))
+
+(define n!!!! (lambda (n)
+                ((Y (lambda (f) (lambda (i result) (if (< i 2) result (f (- i 4) (* i result)))))) n 1)))
+
+(n!!!! 0) ; -> 1
+(n!!!! 1) ; -> 1
+(n!!!! 2) ; -> 2
+(n!!!! 3) ; -> 3
+(n!!!! 4) ; -> 4
+(n!!!! 5) ; -> 5
+(n!!!! 6) ; -> 12
+(n!!!! 7) ; -> 21
+(n!!!! 8) ; -> 32
+(n!!!! 9) ; -> 45
+(n!!!! 10) ; -> 120
