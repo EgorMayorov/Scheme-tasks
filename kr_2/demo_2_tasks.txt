@@ -1,0 +1,47 @@
+#lang scheme/base
+
+
+; 1
+
+(define-syntax when
+  (syntax-rules ()
+    ((when test) test)
+    ((when test ex ...) (if test
+        (begin
+            ex ...
+        )#f))
+  )
+)
+
+(when (< 1 2))
+(when (< 2 1))
+(when (< 1 2) (println "a") (println "aa") (println "aaa") 0)
+(when 0)
+
+
+; 2
+
+(define (filter1 f lst)
+    (reverse (foldl (lambda (x y)
+        (if (f x) (cons x y) y)
+    ) null lst))
+)
+
+(define (filter2 f lst)
+    (foldr (lambda (x y)
+        (if (f x) (cons x y) y)
+    ) null lst)
+)
+
+(filter1 (lambda (x) (> x 3)) '(1 2 3 4 5))
+(filter1 (lambda (x) (= x 3)) '(1 2 3 4 5))
+(filter1 (lambda (x) (< x 3)) '(4 5 6 7 8))
+
+(filter2 (lambda (x) (> x 3)) '(1 2 3 4 5))
+(filter2 (lambda (x) (= x 3)) '(1 2 3 4 5))
+(filter2 (lambda (x) (< x 3)) '(4 5 6 7 8))
+
+
+; 3
+
+; (λz. (λx. ((λy. (x z)) ((λy. y y) (λy. y y z))))) a b  -->  (λx. ((λy. (x a)) ((λy. y y) (λy. y y a)))) b  -->  (λy. (b a)) ((λy. y y) (λy. y y a))  -->  b a - нормальная форма
