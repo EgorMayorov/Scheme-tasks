@@ -9,7 +9,7 @@
 (define (visit-doctor name)
   (printf "Hello, ~a!\n" name)
   (print '(what seems to be the trouble?))
-  (doctor-driver-loop-v2 name #())
+  (doctor-driver-loop-v3 name #())
 )
 
 ; вторая функция, запускающая "Доктора", но в многопользовательском режиме
@@ -70,6 +70,34 @@
                   (if (< (vector-length history) 5)
                       (doctor-driver-loop-v2 name (vector-append history (vector user-response)))
                       (doctor-driver-loop-v2 name (vector-append (vector-drop history 1) (vector user-response)))
+                  )
+             )
+       )
+      )
+)
+
+; функция, использующаяся для фильтрации реплик пользователя от "плохих" слов
+; используется в реализации дополнительной стратегии ответов
+(define (doctor-driver-loop-v3 name history)
+    (newline)
+    (print '**) ; доктор ждёт ввода реплики пациента, приглашением к которому является **
+    (let ((user-response (read)))
+      (cond 
+	    ((equal? user-response '(goodbye)) ; реплика '(goodbye) служит для выхода из цикла
+             (printf "Goodbye, ~a!\n" name)
+             (print '(see you next week))
+             (newline)
+            )
+            (else (print (reply-v3 user-response history)) ; иначе Доктор генерирует ответ, печатает его и продолжает цикл
+                  (if (has-bad-word user-response) ; при наличии стоп-слова в реплике, она не добавляется в историю фраз, а история меняется
+                      (if (> (vector-length history) 2)
+                          (doctor-driver-loop-v3 name (vector-take history 3))
+                          (doctor-driver-loop-v3 name #())
+                      )
+                      (if (< (vector-length history) 5)
+                          (doctor-driver-loop-v3 name (vector-append history (vector user-response)))
+                          (doctor-driver-loop-v3 name (vector-append (vector-drop history 1) (vector user-response)))
+                      )
                   )
              )
        )
@@ -441,5 +469,63 @@
 (define (reply-v2 user-response history)
   ((pick-strategy user-response history) user-response history)
 )
+
+
+
+;;
+;; новая стратегия ответов на реплики пользователя - при обнаружении "плохих" слов менять тему диалога
+;;
+
+; список стоп-слов
+(define bad-words-list #(selfharm veins throat hang kill alcohol drugs))
+
+; проверка на наличие стоп-слова во фразе пользователя
+(define (has-bad-word user-response)
+  (call/cc
+   (lambda (cc-exit)    
+     (let loop ((user-response user-response))
+       (if (null? user-response)
+           #f
+           (begin
+             (vector-foldl
+              (lambda (i result elem)
+                (if (equal? (car user-response) elem)
+                    (cc-exit #t)
+                    (void)
+                )
+              )
+              #()
+              bad-words-list
+             )
+             (loop (cdr user-response))
+           )
+       )
+     )     
+   )
+  )
+)
+
+; новая стратегия ответа - при встрече стоп-слова предлагается сменить тему диалога
+(define (reply-v3 user-response history)
+  (if (has-bad-word user-response)
+      (begin
+        (println '(i think we should not talk about this))
+        (println '(let's go a little back))
+        ; вместо стандартного ответа берем 3 фразу в истории реплик пользователя, вместо history нужно взять первые две фразы если они есть
+        ; если длины истории ответов не хватает, то:
+        ; 1) если есть хотя бы одна фраза - использовать ее и обнулить историю
+        ; 2) если история пустая, то начать диалог с начала фразой "tell me please about your problem using another words"
+        (if (> (vector-length history) 2)
+            ((pick-strategy (vector-ref history 2) (vector-take history 2)) (vector-ref history 2) (vector-take history 2))
+            (if (> (vector-length history) 0)
+                ((pick-strategy (vector-ref history 0) #()) (vector-ref history 0) #())
+                '(tell me please about your problem using another words)
+            )
+        )
+      )
+      ((pick-strategy user-response history) user-response history)
+  )
+)
+
 
 (visit-doctor-v2 'stop 3)
